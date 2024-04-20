@@ -1,0 +1,48 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+MACHINES = {
+  :server => {
+    :box_name => "centos",
+    :net => [
+              
+              {ip: '192.168.56.10', adapter: 5}, #ansible
+            ],
+      },
+  :client => {
+    :box_name => "centos",
+    :net => [
+              {ip: '192.168.56.11', adapter: 5}, #ansible
+            ],
+    }
+}
+
+Vagrant.configure("2") do |config|
+  config.vm.box_check_update = false
+  config.vm.provider :virtualbox
+  MACHINES.each do |boxname, boxconfig|
+    config.vm.define boxname do |box|
+      box.vm.box = boxconfig[:box_name]
+      box.vm.host_name = boxname.to_s
+      
+      boxconfig[:net].each do |ipconf|
+        box.vm.network "private_network", **ipconf
+      end
+
+      box.vm.provision "ansible" do |ansible|
+#       ansible.compatibility_mode = "2.0"
+       ansible.playbook = boxname.to_s + ".yml"
+#       ansible.extra_vars = GLOBAL_VARS.merge(boxconfig[:vars])
+       ansible.inventory_path = "hosts"
+       ansible.host_key_checking = "false"
+       ansible.limit = "all"    
+       ansible.become = "true" 
+      end
+    end       
+  end
+end
+
+
+
+
+

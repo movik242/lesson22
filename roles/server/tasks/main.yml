@@ -1,0 +1,53 @@
+---
+- name: Disable SELinux
+  selinux:
+    state: disabled
+
+- name: Enable EPEL Repository on CentOS 7
+  yum:
+    name: epel-release
+    state: present
+
+- name: Install packages
+  yum: pkg={{ item }} state=present update_cache=yes
+  with_items:
+    - openvpn
+    - iperf3
+
+- name: Creates directory
+  ansible.builtin.file:
+    path: etc/openvpn/
+    state: directory  
+    
+- name: Touch file 
+  ansible.builtin.file:
+    path: /home/vagrant/static.key
+    state: touch
+    
+- name: Copy file 
+  ansible.builtin.copy:
+    src: /home/vagrant/static.key
+    dest: etc/openvpn/static.key
+    remote_src: yes
+    
+- name: Check if /etc/openvpn/static.key file exists (to determine if new install)
+  stat:
+    path: /etc/openvpn/static.key
+  register: static_key_stat
+
+- name: Generating static key
+  command: openvpn --genkey --secret /etc/openvpn/static.key
+  when:
+    - static_key_stat.stat.exists == False
+
+- name: Add config
+  template:
+    src: server.conf.j2
+    dest: /etc/openvpn/server.conf
+    mode: '0644'
+
+- name: Start OpenVPN service
+  systemd:
+    name: openvpn@server
+    enabled: true
+    state: started

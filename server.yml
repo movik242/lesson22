@@ -1,0 +1,6 @@
+---
+- name: Configuring server
+  hosts: server
+  roles:
+    - role: server
+
